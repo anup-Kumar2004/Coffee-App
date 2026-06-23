@@ -1,4 +1,4 @@
-package com.example.coffeeapp.screens.ui_components
+package com.example.coffeeapp.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview

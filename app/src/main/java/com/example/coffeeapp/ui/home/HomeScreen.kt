@@ -1,4 +1,4 @@
-package com.example.coffeeapp.screens.homescreen
+package com.example.coffeeapp.ui.home
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview

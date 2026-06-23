@@ -1,4 +1,4 @@
-package com.example.coffeeapp.screens.welcomescreen
+package com.example.coffeeapp.ui.welcome
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
