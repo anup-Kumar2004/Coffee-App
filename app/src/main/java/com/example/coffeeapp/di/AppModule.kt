@@ -1,12 +1,23 @@
 package com.example.coffeeapp.di
 
+import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-    // Phase 3: Firebase Auth and Firestore providers will go here
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth{
+        return FirebaseAuth.getInstance()
+    }
+
     // Phase 6: Room database provider will go here
+
+
 }
