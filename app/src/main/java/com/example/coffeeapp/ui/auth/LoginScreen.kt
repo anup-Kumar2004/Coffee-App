@@ -54,6 +54,8 @@ import com.example.coffeeapp.ui.theme.StarbucksGray
 import com.example.coffeeapp.ui.theme.StarbucksGreen
 import com.example.coffeeapp.ui.theme.StarbucksMint
 
+
+
 @Composable
 fun LoginScreen(
     authState: AuthViewModel.AuthState,
@@ -64,6 +66,8 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    var localError by remember { mutableStateOf("") }
 
 
     Column(
@@ -187,6 +191,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
@@ -200,10 +205,46 @@ fun LoginScreen(
             }
         }
 
+        val errorMessage = when {
+            localError.isNotEmpty() -> localError
+            authState is AuthViewModel.AuthState.Error -> {
+                val msg = authState.message
+                when {
+                    msg.contains("no user record", ignoreCase = true) -> "No account found with this email"
+                    msg.contains("password is invalid", ignoreCase = true) ||
+                            msg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) -> "Incorrect email or password"
+                    msg.contains("network", ignoreCase = true) -> "No internet connection"
+                    msg.contains("too many requests", ignoreCase = true) -> "Too many attempts. Try again later"
+                    else -> msg
+                }
+            }
+            else -> ""
+        }
+
+        if (errorMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = errorMessage,
+                color = Color.Red,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = { onSignIn(email, password) },
+            onClick = {
+                localError = ""
+                when {
+                    email.isBlank() -> localError = "Please enter your email"
+                    !isValidEmail(email) -> localError = "Please enter a valid email address"
+                    password.isBlank() -> localError = "Please enter your password"
+                    password.length < 6 -> localError = "Password must be at least 6 characters"
+                    else -> onSignIn(email, password)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

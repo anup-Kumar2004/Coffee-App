@@ -8,9 +8,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.coffeeapp.navigation.Screen
 
-
 @Composable
-fun LoginScreenRoute(
+fun SignUpScreenRoute(
     navController: NavController,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -19,22 +18,18 @@ fun LoginScreenRoute(
     LaunchedEffect(authState) {
         when (authState) {
             is AuthViewModel.AuthState.Success -> {
-                viewModel.resetState()   // ← Reset FIRST
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
+                viewModel.resetState()
             }
             else -> Unit
         }
     }
 
-    LoginScreen(
+    SignUpScreen(
         authState = authState,
-        onSignIn = { email, password -> viewModel.signIn(email, password) },
-        onNavigateToSignUp = {
-            viewModel.resetState()
-            navController.navigate(Screen.SignUp.route)
-        },
+        onSignUp = { email, password -> viewModel.signUp(email, password) },
         onNavigateBack = { navController.navigateUp() }
     )
 }
