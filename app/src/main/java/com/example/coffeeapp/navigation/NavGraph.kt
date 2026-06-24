@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.coffeeapp.ui.auth.LoginScreenRoute
 import com.example.coffeeapp.ui.welcome.WelcomeScreen
 
 sealed class Screen(val route: String) {
@@ -23,8 +24,12 @@ fun AppNavHost(navController: NavHostController) {
         navController = navController,
         startDestination = Screen.Welcome.route
     ) {
-        composable(Screen.Welcome.route) { WelcomeScreen() }
-        composable(Screen.Login.route) { }
+        composable(Screen.Welcome.route) {
+            WelcomeScreen(onGetStarted = { navController.navigate(Screen.Login.route) })
+        }
+        composable(Screen.Login.route) {
+            LoginScreenRoute(navController = navController)
+        }
         composable(Screen.SignUp.route) { }
         composable(Screen.Home.route) { }
         composable(Screen.ProductDetail.route) { }

@@ -25,9 +25,9 @@ import com.example.coffeeapp.R
 import com.example.coffeeapp.ui.theme.StarbucksGray
 import com.example.coffeeapp.ui.theme.StarbucksGreen
 
-@Preview(showBackground = true)
+
 @Composable
-fun WelcomeScreen() {
+fun WelcomeScreen(onGetStarted: () -> Unit) {
 
     Column(
         modifier = Modifier
@@ -65,7 +65,7 @@ fun WelcomeScreen() {
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = {},
+            onClick = { onGetStarted() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -80,4 +80,11 @@ fun WelcomeScreen() {
             )
         }
     }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun WelcomeScreenPreview() {
+    WelcomeScreen(onGetStarted = {})
 }
