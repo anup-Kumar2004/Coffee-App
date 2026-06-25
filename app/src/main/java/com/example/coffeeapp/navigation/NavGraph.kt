@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.coffeeapp.ui.auth.LoginScreenRoute
 import com.example.coffeeapp.ui.auth.SignUpScreenRoute
+import com.example.coffeeapp.ui.home.HomeScreenRoute
 import com.example.coffeeapp.ui.welcome.WelcomeScreen
 
 @Composable
@@ -33,7 +34,9 @@ fun AppNavHost(
         composable(Screen.SignUp.route) {
             SignUpScreenRoute(navController = navController)
         }
-        composable(Screen.Home.route) { }
+        composable(Screen.Home.route) {
+            HomeScreenRoute(navController = navController)
+        }
         composable(Screen.ProductDetail.route) { }
         composable(Screen.Cart.route) { }
         composable(Screen.Favorites.route) { }
