@@ -29,7 +29,9 @@ fun SignUpScreenRoute(
 
     SignUpScreen(
         authState = authState,
-        onSignUp = { email, password -> viewModel.signUp(email, password) },
+        onSignUp = { email, password, firstName, lastName ->
+            viewModel.signUp(email, password, firstName, lastName)
+        },
         onNavigateBack = { navController.navigateUp() }
     )
 }

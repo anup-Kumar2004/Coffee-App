@@ -35,10 +35,10 @@ class AuthViewModel @Inject constructor(private val authRepository: AuthReposito
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, firstName: String, lastName: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            val result = authRepository.signUp(email, password)
+            val result = authRepository.signUp(email, password, firstName, lastName)
             _authState.value = if (result.isSuccess) {
                 AuthState.Success
             } else {

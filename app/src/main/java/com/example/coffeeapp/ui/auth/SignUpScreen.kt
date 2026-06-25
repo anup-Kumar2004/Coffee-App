@@ -60,7 +60,7 @@ import androidx.compose.foundation.verticalScroll
 @Composable
 fun SignUpScreen(
     authState: AuthViewModel.AuthState,
-    onSignUp: (String, String) -> Unit,
+    onSignUp: (String, String, String, String) -> Unit,
     onNavigateBack: () -> Unit
 ) {
 
@@ -291,7 +291,7 @@ fun SignUpScreen(
                     !isValidEmail(email) -> passwordError = "Please enter a valid email address"
                     password.length < 6 -> passwordError = "Password must be at least 6 characters"
                     password != confirmPassword -> passwordError = "Passwords do not match"
-                    else -> onSignUp(email, password)
+                    else -> onSignUp(email, password, firstName, lastName)
                 }
             },
             modifier = Modifier
@@ -345,7 +345,7 @@ fun SignUpScreen(
 fun SignUpScreenPreview() {
     SignUpScreen(
         authState = AuthViewModel.AuthState.Idle,
-        onSignUp = { _, _ -> },
+        onSignUp = { _, _, _, _ -> },
         onNavigateBack = {}
     )
 }
