@@ -6,8 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -16,7 +15,6 @@ import com.example.coffeeapp.navigation.AppNavHost
 import com.example.coffeeapp.ui.main.MainViewModel
 import com.example.coffeeapp.ui.theme.CoffeeAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.compose.foundation.layout.imePadding
 
 
 
@@ -33,17 +31,21 @@ class MainActivity : ComponentActivity() {
                 val startDestination by mainViewModel.startDestination.collectAsState()
                 val navController = rememberNavController()
 
-                Scaffold(
+                // No Scaffold here anymore — MainScreen (the bottom-nav tab container)
+                // owns its own Scaffold for the bottom bar, which already accounts for the
+                // bottom system nav bar correctly via its own innerPadding. Applying
+                // statusBarsPadding()/navigationBarsPadding() HERE would double-pad
+                // MainScreen's bottom bar (a visible empty gap below it).
+                // Instead, each screen OUTSIDE MainScreen's tab structure (Welcome, Login,
+                // SignUp, and later ProductDetail) applies statusBarsPadding() +
+                // navigationBarsPadding() individually on its own root Modifier.
+                AppNavHost(
+                    navController = navController,
+                    startDestination = startDestination,
                     modifier = Modifier
                         .fillMaxSize()
-                        .imePadding()   // ← this is the key addition
-                ) { innerPadding ->
-                    AppNavHost(
-                        navController = navController,
-                        startDestination = startDestination,
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                        .imePadding()
+                )
             }
         }
     }

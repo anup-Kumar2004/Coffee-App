@@ -20,7 +20,7 @@ fun LoginScreenRoute(
         when (authState) {
             is AuthViewModel.AuthState.Success -> {
                 viewModel.resetState()   // ← Reset FIRST
-                navController.navigate(Screen.Home.route) {
+                navController.navigate(Screen.MainScreen.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
             }

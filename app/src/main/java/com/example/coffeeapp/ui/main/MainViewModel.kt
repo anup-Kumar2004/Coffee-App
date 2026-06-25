@@ -15,7 +15,7 @@ class MainViewModel @Inject constructor(
 
     private val _startDestination = MutableStateFlow(
         if (authRepository.getCurrentUser() != null) {
-            Screen.Home.route
+            Screen.MainScreen.route
         } else {
             Screen.Welcome.route
         }

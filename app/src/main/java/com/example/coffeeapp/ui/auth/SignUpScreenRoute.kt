@@ -18,7 +18,7 @@ fun SignUpScreenRoute(
     LaunchedEffect(authState) {
         when (authState) {
             is AuthViewModel.AuthState.Success -> {
-                navController.navigate(Screen.Home.route) {
+                navController.navigate(Screen.MainScreen.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
                 viewModel.resetState()
