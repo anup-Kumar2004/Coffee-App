@@ -90,4 +90,8 @@ class ProductRepository @Inject constructor(
     fun getCachedProducts(): List<Product> {
         return cachedProducts ?: emptyList()
     }
+
+    fun getProductById(id: String): Product? {
+        return cachedProducts?.find { it.id == id }
+    }
 }

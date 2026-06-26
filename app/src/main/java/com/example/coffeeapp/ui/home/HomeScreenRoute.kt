@@ -16,9 +16,8 @@ fun HomeScreenRoute(
 
     HomeScreen(
         uiState = uiState,
-        onProductClick = { _ ->
-            navController.navigate(Screen.ProductDetail.route)
-            // Phase 6: pass productId as nav arg when ProductDetail is built
+        onProductClick = { productId ->
+            navController.navigate(Screen.ProductDetail.createRoute(productId))
         },
         onCategorySelected = { category ->
             viewModel.onCategorySelected(category)

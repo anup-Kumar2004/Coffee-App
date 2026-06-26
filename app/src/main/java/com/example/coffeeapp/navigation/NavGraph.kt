@@ -3,11 +3,14 @@ package com.example.coffeeapp.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.coffeeapp.ui.auth.LoginScreenRoute
 import com.example.coffeeapp.ui.auth.SignUpScreenRoute
 import com.example.coffeeapp.ui.main.MainScreen
+import com.example.coffeeapp.ui.productdetail.ProductDetailScreenRoute
 import com.example.coffeeapp.ui.welcome.WelcomeScreen
 
 @Composable
@@ -37,9 +40,11 @@ fun AppNavHost(
         composable(Screen.MainScreen.route) {
             MainScreen(outerNavController = navController)
         }
-        composable(Screen.ProductDetail.route) { }
-        // Phase 6: ProductDetail will receive a productId nav argument here.
-        // Cart, OrderHistory, and Profile no longer have outer routes — they live
-        // inside MainScreen's own inner NavHost as bottom-nav tabs.
+        composable(
+            route = Screen.ProductDetail.route,
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) {
+            ProductDetailScreenRoute(navController = navController)
+        }
     }
 }
