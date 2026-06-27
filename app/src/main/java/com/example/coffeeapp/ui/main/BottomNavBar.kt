@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -38,12 +37,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.width
 import com.example.coffeeapp.ui.theme.StarbucksGreen
 import com.example.coffeeapp.ui.theme.StarbucksGray
 import com.example.coffeeapp.ui.theme.StarbucksWhite
@@ -121,7 +121,7 @@ fun BottomNavBar(
 }
 
 @Composable
-private fun RowScope.NavBarItem(
+private fun NavBarItem(
     tab: BottomNavTab,
     isSelected: Boolean,
     badgeCount: Int,
@@ -160,7 +160,7 @@ private fun RowScope.NavBarItem(
                     count = badgeCount,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .offset(x = 8.dp, y = (-6).dp)
+                        .offset(x = 6.dp, y = (-4).dp)
                 )
             }
         }
@@ -177,24 +177,29 @@ private fun RowScope.NavBarItem(
 @Composable
 private fun CartBadge(count: Int, modifier: Modifier = Modifier) {
     val displayText = if (count > 9) "9+" else count.toString()
-
-    val badgeSize by animateDpAsState(
-        targetValue = 16.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "cartBadgeSize"
-    )
+    val isDoubleDigit = displayText.length > 1
 
     Box(
         modifier = modifier
-            .size(badgeSize)
-            .background(CartBadgeRed, CircleShape),
+            .then(
+                if (isDoubleDigit)
+                    Modifier
+                        .width(18.dp)
+                        .height(13.dp)
+                else
+                    Modifier.size(13.dp)
+            )
+            .background(CartBadgeRed, CircleShape)
+            .padding(horizontal = if (isDoubleDigit) 2.dp else 0.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = displayText,
             color = Color.White,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 7.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            lineHeight = 7.sp
         )
     }
 }

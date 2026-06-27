@@ -71,15 +71,26 @@ import kotlinx.coroutines.delay
 import java.util.Calendar
 import androidx.core.graphics.toColorInt
 import kotlin.time.Duration.Companion.milliseconds
-
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.Job
 
 @Composable
 fun HomeScreen(
     uiState: HomeViewModel.HomeUiState,
     onProductClick: (String) -> Unit,
     onCategorySelected: (String) -> Unit,
+    onAddToCart: (Product) -> Unit,
     onRetry: () -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val snackbarJob = remember { mutableStateOf<Job?>(null) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -91,19 +102,41 @@ fun HomeScreen(
                     item { HomeLoadingSkeleton() }
                 }
             }
-
             is HomeViewModel.HomeUiState.Error -> {
                 HomeErrorState(message = uiState.message, onRetry = onRetry)
             }
-
             is HomeViewModel.HomeUiState.Success -> {
                 HomeContent(
                     state = uiState,
                     onProductClick = onProductClick,
-                    onCategorySelected = onCategorySelected
+                    onCategorySelected = onCategorySelected,
+                    onAddToCart = { product ->
+                        onAddToCart(product)
+                        snackbarJob.value?.cancel()
+                        snackbarJob.value = scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "${product.name} added to cart!",
+                                duration = androidx.compose.material3.SnackbarDuration.Short
+                            )
+                        }
+                    }
                 )
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = StarbucksGreen,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
     }
 }
 
@@ -112,8 +145,9 @@ fun HomeScreen(
 private fun HomeContent(
     state: HomeViewModel.HomeUiState.Success,
     onProductClick: (String) -> Unit,
-    onCategorySelected: (String) -> Unit
-) {
+    onCategorySelected: (String) -> Unit,
+    onAddToCart: (Product) -> Unit
+){
     val productRows = state.products.chunked(2)
 
     LazyColumn(
@@ -177,7 +211,8 @@ private fun HomeContent(
                         ProductCard(
                             product = product,
                             modifier = Modifier.weight(1f),
-                            onClick = { onProductClick(product.id) }
+                            onClick = { onProductClick(product.id) },
+                            onAddToCart = { onAddToCart(product) }
                         )
                     }
 
@@ -463,7 +498,8 @@ private fun CategoryPills(
 private fun ProductCard(
     product: Product,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAddToCart: () -> Unit
 ) {
     val bgColor = remember(product.cardColor) {
         try {
@@ -477,7 +513,6 @@ private fun ProductCard(
 
     Box(
         modifier = modifier
-            .height(200.dp)
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .background(bgColor)
@@ -487,77 +522,79 @@ private fun ProductCard(
                 onClick = onClick
             )
     ) {
-        AsyncImage(
-            model = product.imageUrl,
-            contentDescription = product.name,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .size(130.dp)
-                .align(Alignment.TopCenter)
-                .offset(y = (-12).dp)
-        )
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
-                    )
-                )
-                .padding(horizontal = 10.dp, vertical = 10.dp)
-        ) {
-            Text(
-                text = product.name,
-                color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        Column {
+            // Fixed height image section
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    if (minPrice != null) {
-                        Text(
-                            text = "$" + "%.2f".format(minPrice),
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = product.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-                    if (product.rating > 0) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(11.dp)
-                            )
+            // Text info section — always below image, never overlapping
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .background(bgColor)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = product.name,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 17.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        if (minPrice != null) {
                             Text(
-                                text = "%.1f".format(product.rating),
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 11.sp
+                                text = "$" + "%.2f".format(minPrice),
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
+                        if (product.rating > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFD700),
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = "%.1f".format(product.rating),
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
                     }
+
+                    AddButton(onClick = onAddToCart)
                 }
-
-                AddButton(onClick = {
-                /* Phase 7: cart logic */
-
-                })
             }
         }
     }
@@ -599,7 +636,7 @@ private fun AddButton(onClick: () -> Unit) {
 
 @Composable
 private fun androidx.compose.foundation.interaction.InteractionSource.collectIsPressedAsState(): androidx.compose.runtime.State<Boolean> {
-    val isPressed = remember { androidx.compose.runtime.mutableStateOf(false) }
+    val isPressed = remember { mutableStateOf(false) }
     LaunchedEffect(this) {
         val interactions = mutableSetOf<androidx.compose.foundation.interaction.Interaction>()
         this@collectIsPressedAsState.interactions.collect { interaction ->
@@ -704,6 +741,7 @@ fun HomeScreenPreview() {
         ),
         onProductClick = {},
         onCategorySelected = {},
+        onAddToCart = {},
         onRetry = {}
     )
 }
@@ -715,6 +753,7 @@ fun HomeScreenLoadingPreview() {
         uiState = HomeViewModel.HomeUiState.Loading,
         onProductClick = {},
         onCategorySelected = {},
+        onAddToCart = {},
         onRetry = {}
     )
 }

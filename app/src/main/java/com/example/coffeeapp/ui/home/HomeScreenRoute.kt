@@ -22,6 +22,9 @@ fun HomeScreenRoute(
         onCategorySelected = { category ->
             viewModel.onCategorySelected(category)
         },
+        onAddToCart = { product ->
+            viewModel.addToCart(product)
+        },
         onRetry = {
             viewModel.loadData()
         }

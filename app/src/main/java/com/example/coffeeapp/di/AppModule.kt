@@ -1,10 +1,15 @@
 package com.example.coffeeapp.di
 
+import android.content.Context
+import androidx.room.Room
+import com.example.coffeeapp.data.AppDatabase
+import com.example.coffeeapp.data.CartDao
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -24,5 +29,19 @@ object AppModule {
         return FirebaseFirestore.getInstance()
     }
 
-    // Phase 6: Room database provider will go here
+    @Provides
+    @Singleton
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            "coffee_app_database"
+        ).build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCartDao(database: AppDatabase): CartDao {
+        return database.cartDao()
+    }
 }

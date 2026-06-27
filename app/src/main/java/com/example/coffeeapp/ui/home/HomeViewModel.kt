@@ -2,6 +2,7 @@ package com.example.coffeeapp.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.coffeeapp.data.CartRepository
 import com.example.coffeeapp.data.ProductRepository
 import com.example.coffeeapp.data.UserRepository
 import com.example.coffeeapp.model.Category
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val productRepository: ProductRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val cartRepository: CartRepository
 ) : ViewModel() {
 
     sealed class HomeUiState {
@@ -46,10 +48,7 @@ class HomeViewModel @Inject constructor(
             val categoriesResult = productRepository.getCategories()
             val featuredResult = productRepository.getFeaturedProducts()
 
-            if (productsResult.isSuccess &&
-                categoriesResult.isSuccess &&
-                featuredResult.isSuccess
-            ) {
+            if (productsResult.isSuccess && categoriesResult.isSuccess && featuredResult.isSuccess) {
                 val products = productsResult.getOrNull() ?: emptyList()
                 val categories = categoriesResult.getOrNull() ?: emptyList()
                 val featured = featuredResult.getOrNull() ?: emptyList()
@@ -66,25 +65,25 @@ class HomeViewModel @Inject constructor(
                 val error = productsResult.exceptionOrNull()
                     ?: categoriesResult.exceptionOrNull()
                     ?: featuredResult.exceptionOrNull()
-                _uiState.value = HomeUiState.Error(
-                    error?.message ?: "Something went wrong"
-                )
+                _uiState.value = HomeUiState.Error(error?.message ?: "Something went wrong")
             }
         }
     }
 
     fun onCategorySelected(category: String) {
         val currentState = _uiState.value as? HomeUiState.Success ?: return
-
         val filteredProducts = if (category == "All") {
             productRepository.getCachedProducts()
         } else {
             productRepository.getCachedProducts().filter { it.category == category }
         }
+        _uiState.value = currentState.copy(selectedCategory = category, products = filteredProducts)
+    }
 
-        _uiState.value = currentState.copy(
-            selectedCategory = category,
-            products = filteredProducts
-        )
+    fun addToCart(product: Product) {
+        viewModelScope.launch {
+            val defaultSize = product.sizes.keys.firstOrNull() ?: return@launch
+            cartRepository.addToCart(product, defaultSize, 1)
+        }
     }
 }

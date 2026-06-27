@@ -19,9 +19,7 @@ fun ProductDetailScreenRoute(
         onIncrementQuantity = viewModel::incrementQuantity,
         onDecrementQuantity = viewModel::decrementQuantity,
         onToggleFavorite = viewModel::toggleFavorite,
-        onAddToCart = {
-            // Phase 7: real cart logic wires in here.
-        },
+        onAddToCart = viewModel::addToCart,
         onNavigateBack = { navController.navigateUp() }
     )
 }

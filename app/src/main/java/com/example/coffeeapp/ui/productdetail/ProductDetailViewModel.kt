@@ -2,11 +2,14 @@ package com.example.coffeeapp.ui.productdetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.coffeeapp.data.CartRepository
 import com.example.coffeeapp.data.ProductRepository
 import com.example.coffeeapp.model.Product
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private val SIZE_ORDER = listOf("small", "medium", "large", "regular")
@@ -23,7 +26,8 @@ fun sortedSizeKeys(sizes: Map<String, Double>): List<String> {
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val cartRepository: CartRepository
 ) : ViewModel() {
 
     sealed class ProductDetailUiState {
@@ -82,5 +86,16 @@ class ProductDetailViewModel @Inject constructor(
     fun toggleFavorite() {
         val current = _uiState.value as? ProductDetailUiState.Success ?: return
         _uiState.value = current.copy(isFavorited = !current.isFavorited)
+    }
+
+    fun addToCart() {
+        val current = _uiState.value as? ProductDetailUiState.Success ?: return
+        viewModelScope.launch {
+            cartRepository.addToCart(
+                product = current.product,
+                selectedSize = current.selectedSize,
+                quantity = current.quantity
+            )
+        }
     }
 }

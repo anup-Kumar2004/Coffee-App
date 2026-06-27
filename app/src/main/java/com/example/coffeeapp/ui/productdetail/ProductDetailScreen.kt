@@ -74,8 +74,13 @@ import com.example.coffeeapp.ui.theme.StarbucksGray
 import com.example.coffeeapp.ui.theme.StarbucksGold
 import com.example.coffeeapp.ui.theme.StarbucksGreen
 import com.example.coffeeapp.ui.theme.StarbucksMint
-import com.example.coffeeapp.ui.theme.StarbucksSurface
 import com.example.coffeeapp.ui.theme.StarbucksWhite
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 
 private val FavoriteRed = Color(0xFFE0483E)
@@ -241,6 +246,26 @@ private fun ProductDetailContent(
             FavoriteButton(isFavorited = state.isFavorited, onClick = onToggleFavorite)
         }
 
+
+        val snackbarHostState = remember { SnackbarHostState() }
+        val scope = rememberCoroutineScope()
+        val snackbarJob = remember { mutableStateOf<Job?>(null) }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 96.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = StarbucksGreen,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -255,7 +280,16 @@ private fun ProductDetailContent(
         ) {
             val totalPrice = (product.sizes[state.selectedSize] ?: 0.0) * state.quantity
             Button(
-                onClick = onAddToCart,
+                onClick = {
+                    onAddToCart()
+                    snackbarJob.value?.cancel()
+                    snackbarJob.value = scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Added to cart!",
+                            duration = androidx.compose.material3.SnackbarDuration.Short
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = StarbucksGreen)
@@ -267,6 +301,8 @@ private fun ProductDetailContent(
                 )
             }
         }
+
+
     }
 }
 

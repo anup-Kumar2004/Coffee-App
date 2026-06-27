@@ -3,8 +3,10 @@ package com.example.coffeeapp.ui.main
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -12,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.coffeeapp.ui.cart.CartScreen
+import com.example.coffeeapp.ui.cart.CartViewModel
 import com.example.coffeeapp.ui.home.HomeScreenRoute
 import com.example.coffeeapp.ui.orderhistory.OrderHistoryScreen
 import com.example.coffeeapp.ui.profile.ProfileScreen
@@ -22,9 +25,9 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val innerNavController = rememberNavController()
-
-    // Stub — wire to real cart state in Phase 7.
-    val cartItemCountStub = 2
+    val cartViewModel: CartViewModel = hiltViewModel()
+    val cartItemCount by cartViewModel.cartItems.collectAsState()
+    val totalCartCount = cartItemCount.size
 
     val currentBackStackEntry by innerNavController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
@@ -36,11 +39,10 @@ fun MainScreen(
         bottomBar = {
             BottomNavBar(
                 selectedTab = selectedTab,
-                cartItemCount = cartItemCountStub,
+                cartItemCount = totalCartCount,
                 onTabSelected = { tab ->
                     if (tab.route != currentRoute) {
                         innerNavController.navigate(tab.route) {
-                            // Avoid piling up duplicate tab destinations on the back stack.
                             popUpTo(innerNavController.graph.findStartDestination().id) {
                                 saveState = true
                             }
