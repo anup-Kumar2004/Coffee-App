@@ -28,16 +28,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.toColorInt
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.coffeeapp.model.CartItem
 import com.example.coffeeapp.ui.theme.*
 
 @Composable
-fun CartScreen(modifier: Modifier = Modifier) {
-    val viewModel: CartViewModel = hiltViewModel()
-    val cartItems by viewModel.cartItems.collectAsState()
-    val totalPrice by viewModel.totalPrice.collectAsState()
+fun CartScreen(
+    cartItems: List<CartItem>,
+    totalPrice: Double,
+    onIncrement: (CartItem) -> Unit,
+    onDecrement: (CartItem) -> Unit,
+    onRemove: (CartItem) -> Unit,
+    onClearCart: () -> Unit,
+    onProceedToCheckout: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var showClearDialog by remember { mutableStateOf(false) }
 
     Box(
@@ -51,10 +56,11 @@ fun CartScreen(modifier: Modifier = Modifier) {
             CartContent(
                 cartItems = cartItems,
                 totalPrice = totalPrice,
-                onIncrement = viewModel::incrementQuantity,
-                onDecrement = viewModel::decrementQuantity,
-                onRemove = viewModel::removeItem,
-                onClearCart = { showClearDialog = true }
+                onIncrement = onIncrement,
+                onDecrement = onDecrement,
+                onRemove = onRemove,
+                onClearCart = { showClearDialog = true },
+                onProceedToCheckout = onProceedToCheckout
             )
         }
     }
@@ -62,7 +68,7 @@ fun CartScreen(modifier: Modifier = Modifier) {
     if (showClearDialog) {
         ClearCartDialog(
             onConfirm = {
-                viewModel.clearCart()
+                onClearCart()
                 showClearDialog = false
             },
             onDismiss = { showClearDialog = false }
@@ -114,9 +120,9 @@ private fun CartContent(
     onIncrement: (CartItem) -> Unit,
     onDecrement: (CartItem) -> Unit,
     onRemove: (CartItem) -> Unit,
-    onClearCart: () -> Unit
+    onClearCart: () -> Unit,
+    onProceedToCheckout: () -> Unit
 ) {
-
     Box(modifier = Modifier.fillMaxSize()) {
 
         LazyColumn(
@@ -125,7 +131,6 @@ private fun CartContent(
             ),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header
             item {
                 Row(
                     modifier = Modifier
@@ -148,7 +153,6 @@ private fun CartContent(
                             color = StarbucksGray
                         )
                     }
-                    // Clear all button
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50.dp))
@@ -191,14 +195,11 @@ private fun CartContent(
             }
         }
 
-        // Checkout panel with a top fade gradient so list fades into it
-        // naturally — makes it obvious more items exist below.
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
-            // Fade gradient — transparent → white, 32dp tall
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -209,8 +210,6 @@ private fun CartContent(
                         )
                     )
             )
-
-            // Checkout panel
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -226,7 +225,6 @@ private fun CartContent(
                         .padding(top = 16.dp, bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Order summary row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -251,7 +249,7 @@ private fun CartContent(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
-                                text = "incl. taxes & restaurant charges",
+                                text = "Excl. service fee & taxes",
                                 fontSize = 10.sp,
                                 color = StarbucksGray
                             )
@@ -263,9 +261,8 @@ private fun CartContent(
                             )
                         }
                     }
-
                     Button(
-                        onClick = { /* Phase 10 */ },
+                        onClick = onProceedToCheckout,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
@@ -308,7 +305,6 @@ private fun CartItemCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Product image with brand color background
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -330,7 +326,6 @@ private fun CartItemCard(
                 )
             }
 
-            // Middle: name, size pill, unit price
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -343,8 +338,6 @@ private fun CartItemCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                // Size pill
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50.dp))
@@ -358,16 +351,12 @@ private fun CartItemCard(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-
-                // Unit price in gold — tells user what one item costs
                 Text(
                     text = "$" + "%.2f".format(item.unitPrice) + " each",
                     fontSize = 11.sp,
                     color = StarbucksGold,
                     fontWeight = FontWeight.Medium
                 )
-
-                // Total for this line item
                 Text(
                     text = "$" + "%.2f".format(item.unitPrice * item.quantity),
                     fontSize = 15.sp,
@@ -376,7 +365,6 @@ private fun CartItemCard(
                 )
             }
 
-            // Right: stepper + remove
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -391,7 +379,7 @@ private fun CartItemCard(
                     SmallQtyButton(
                         icon = Icons.Default.Remove,
                         onClick = onDecrement,
-                        enabled = true
+                        enabled = item.quantity > 1
                     )
                     Text(
                         text = item.quantity.toString(),
@@ -407,7 +395,6 @@ private fun CartItemCard(
                         enabled = item.quantity < 10
                     )
                 }
-
                 TextButton(
                     onClick = onRemove,
                     contentPadding = PaddingValues(0.dp),

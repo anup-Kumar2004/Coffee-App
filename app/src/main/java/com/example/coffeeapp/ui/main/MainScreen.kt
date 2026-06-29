@@ -13,7 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.coffeeapp.ui.cart.CartScreen
+import com.example.coffeeapp.ui.cart.CartScreenRoute
 import com.example.coffeeapp.ui.cart.CartViewModel
 import com.example.coffeeapp.ui.home.HomeScreenRoute
 import com.example.coffeeapp.ui.orderhistory.OrderHistoryScreen
@@ -63,7 +63,7 @@ fun MainScreen(
                 HomeScreenRoute(navController = outerNavController)
             }
             composable(BottomNavTab.CART.route) {
-                CartScreen()
+                CartScreenRoute(navController = outerNavController)
             }
             composable(BottomNavTab.ORDER_HISTORY.route) {
                 OrderHistoryScreen()

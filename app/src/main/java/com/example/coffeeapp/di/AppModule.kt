@@ -12,6 +12,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.example.coffeeapp.data.OrderRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -44,4 +45,14 @@ object AppModule {
     fun provideCartDao(database: AppDatabase): CartDao {
         return database.cartDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideOrderRepository(
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): OrderRepository {
+        return OrderRepository(firestore, auth)
+    }
+
 }

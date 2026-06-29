@@ -9,6 +9,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.coffeeapp.ui.auth.LoginScreenRoute
 import com.example.coffeeapp.ui.auth.SignUpScreenRoute
+import com.example.coffeeapp.ui.checkout.OrderCompleteScreenRoute
+import com.example.coffeeapp.ui.checkout.OrderPickupScreenRoute
+import com.example.coffeeapp.ui.checkout.OrderSummaryScreenRoute
+import com.example.coffeeapp.ui.checkout.StoreLocatorScreenRoute
 import com.example.coffeeapp.ui.main.MainScreen
 import com.example.coffeeapp.ui.productdetail.ProductDetailScreenRoute
 import com.example.coffeeapp.ui.welcome.WelcomeScreen
@@ -45,6 +49,24 @@ fun AppNavHost(
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) {
             ProductDetailScreenRoute(navController = navController)
+        }
+        composable(Screen.OrderSummary.route) {
+            OrderSummaryScreenRoute(navController = navController)
+        }
+        composable(Screen.StoreLocator.route) {
+            StoreLocatorScreenRoute(navController = navController)
+        }
+        composable(
+            route = Screen.OrderPickup.route,
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) {
+            OrderPickupScreenRoute(navController = navController)
+        }
+        composable(
+            route = Screen.OrderComplete.route,
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) {
+            OrderCompleteScreenRoute(navController = navController)
         }
     }
 }
