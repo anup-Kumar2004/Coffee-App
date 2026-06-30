@@ -41,6 +41,9 @@ class HomeViewModel @Inject constructor(
     private val _activeOrder = MutableStateFlow<Order?>(null)
     val activeOrder = _activeOrder.asStateFlow()
 
+    private val _dismissedOrderId = MutableStateFlow<String?>(null)
+    val dismissedOrderId = _dismissedOrderId.asStateFlow()
+
     init {
         loadData()
         loadActiveOrder()
@@ -100,5 +103,9 @@ class HomeViewModel @Inject constructor(
             val defaultSize = product.sizes.keys.firstOrNull() ?: return@launch
             cartRepository.addToCart(product, defaultSize, 1)
         }
+    }
+
+    fun dismissActiveOrderBanner(orderId: String) {
+        _dismissedOrderId.value = orderId
     }
 }

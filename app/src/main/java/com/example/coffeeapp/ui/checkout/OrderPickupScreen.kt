@@ -9,8 +9,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material.icons.filled.Visibility
@@ -52,7 +53,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -161,6 +162,10 @@ private fun OrderPickupContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 40.dp)
     ) {
+        // ── Top bar ──────────────────────────────────────────────────────────
+        // FIX: title/order-id column now takes weight(1f) so it shrinks and
+        // ellipsizes instead of pushing the status chip out of view when the
+        // Firestore-generated order ID is long.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,21 +184,25 @@ private fun OrderPickupContent(
                     tint = StarbucksGreen
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Order Pickup",
-                    fontSize = 20.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
-                    color = StarbucksBlack
+                    color = StarbucksBlack,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "Order #${order.orderId}",
-                    fontSize = 12.sp,
-                    color = StarbucksGray
+                    fontSize = 11.sp,
+                    color = StarbucksGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(8.dp))
             StatusChip(status = order.status)
         }
 
@@ -277,52 +286,73 @@ private fun OrderPickupContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+
         AnimatedVisibility(
             visible = state.cancelButtonVisible,
             enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { it / 2 },
             exit = fadeOut(tween(300))
         ) {
+            CancelOrderSection(
+                enabled = state.cancelButtonEnabled,
+                onCancelTapped = onCancelTapped
+            )
+        }
+    }
+}
+
+@Composable
+private fun CancelOrderSection(
+    enabled: Boolean,
+    onCancelTapped: () -> Unit
+) {
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onCancelTapped
+                )
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .size(40.dp)
+                    .background(CancelRed.copy(alpha = 0.12f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                val enabled = state.cancelButtonEnabled
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50.dp))
-                        .border(
-                            width = 1.dp,
-                            color = if (enabled) CancelRed.copy(alpha = 0.35f) else StarbucksGray.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(50.dp)
-                        )
-                        .background(
-                            if (enabled) CancelRed.copy(alpha = 0.06f) else Color.Transparent
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            enabled = enabled,
-                            onClick = onCancelTapped
-                        )
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cancel,
-                        contentDescription = null,
-                        tint = if (enabled) CancelRed else StarbucksGray,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Cancel order",
-                        color = if (enabled) CancelRed else StarbucksGray,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    tint = CancelRed,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Cancel this order",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = StarbucksBlack
+                )
+                Text(
+                    text = "Free cancellation available right now",
+                    fontSize = 11.5.sp,
+                    lineHeight = 15.sp,
+                    color = StarbucksGray
+                )
             }
         }
     }
@@ -344,7 +374,8 @@ private fun StatusChip(status: String) {
             text = label,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            color = textColor
+            color = textColor,
+            maxLines = 1
         )
     }
 }
@@ -627,46 +658,52 @@ private fun CancelConfirmationOverlay(
                             lineHeight = 19.sp
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                        Row(
+                        // FIX: buttons stacked full-width vertically instead of a
+                        // weighted Row. The previous side-by-side layout clipped
+                        // "Keep order" / "Cancel order" at bold 14sp on narrower
+                        // screens. Stacking guarantees single-line text regardless
+                        // of font size, matching the pattern used by iOS action
+                        // sheets and most ride/delivery app cancellation dialogs.
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Button(
-                                onClick = onKeepOrder,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Transparent,
-                                    contentColor = StarbucksGreen
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp, StarbucksGreen.copy(alpha = 0.35f)
-                                ),
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-                            ) {
-                                Text(
-                                    text = "Keep order",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
                             Button(
                                 onClick = onConfirmCancel,
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
+                                    .fillMaxWidth()
+                                    .height(50.dp),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = CancelRed)
                             ) {
                                 Text(
                                     text = "Cancel order",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            }
+
+                            Button(
+                                onClick = onKeepOrder,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = StarbucksGreen
+                                ),
+                                border = BorderStroke(1.dp, StarbucksGreen.copy(alpha = 0.35f)),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                            ) {
+                                Text(
+                                    text = "Keep order",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
                                 )
                             }
                         }

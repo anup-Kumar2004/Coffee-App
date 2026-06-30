@@ -65,7 +65,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -97,10 +96,12 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     uiState: HomeViewModel.HomeUiState,
     activeOrder: Order?,
+    dismissedOrderId: String?,
     onProductClick: (String) -> Unit,
     onCategorySelected: (String) -> Unit,
     onAddToCart: (Product) -> Unit,
     onTrackOrder: (String) -> Unit,
+    onDismissActiveOrder: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -125,9 +126,11 @@ fun HomeScreen(
                 HomeContent(
                     state = uiState,
                     activeOrder = activeOrder,
+                    dismissedOrderId = dismissedOrderId,
                     onProductClick = onProductClick,
                     onCategorySelected = onCategorySelected,
                     onTrackOrder = onTrackOrder,
+                    onDismissActiveOrder = onDismissActiveOrder,
                     onAddToCart = { product ->
                         onAddToCart(product)
                         snackbarJob.value?.cancel()
@@ -163,9 +166,11 @@ fun HomeScreen(
 private fun HomeContent(
     state: HomeViewModel.HomeUiState.Success,
     activeOrder: Order?,
+    dismissedOrderId: String?,
     onProductClick: (String) -> Unit,
     onCategorySelected: (String) -> Unit,
     onTrackOrder: (String) -> Unit,
+    onDismissActiveOrder: (String) -> Unit,
     onAddToCart: (Product) -> Unit
 ){
     val productRows = state.products.chunked(2)
@@ -182,17 +187,15 @@ private fun HomeContent(
 
         if (activeOrder != null) {
             item(key = "active_order") {
-                var dismissed by remember(activeOrder.orderId) { mutableStateOf(false) }
-
                 AnimatedVisibility(
-                    visible = !dismissed,
+                    visible = activeOrder.orderId != dismissedOrderId,
                     exit = fadeOut(tween(250)) + shrinkVertically(tween(250))
                 ) {
                     Column {
                         ActiveOrderTicket(
                             order = activeOrder,
                             onTrack = { onTrackOrder(activeOrder.orderId) },
-                            onDismiss = { dismissed = true }
+                            onDismiss = { onDismissActiveOrder(activeOrder.orderId) }
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                     }
@@ -935,72 +938,3 @@ private fun HomeErrorState(message: String, onRetry: () -> Unit) {
     }
 }
 
-
-@Preview(showBackground = true, backgroundColor = 0xFFF7F8F7)
-@Composable
-fun HomeScreenPreview() {
-    val fakeProducts = listOf(
-        Product(
-            id = "1", name = "Caramel Latte", description = "Rich espresso with caramel",
-            category = "Latte", imageUrl = "", cardColor = "#2C1810",
-            isAvailable = true, isFeatured = true, rating = 4.8, totalRatings = 234,
-            sizes = mapOf("small" to 250.0, "medium" to 320.0, "large" to 390.0)
-        ),
-        Product(
-            id = "2", name = "Cold Brew", description = "Smooth cold brew coffee",
-            category = "Cold Brew", imageUrl = "", cardColor = "#1A3A4A",
-            isAvailable = true, isFeatured = true, rating = 4.6, totalRatings = 189,
-            sizes = mapOf("regular" to 280.0, "large" to 350.0)
-        ),
-        Product(
-            id = "3", name = "Matcha Latte", description = "Ceremonial grade matcha",
-            category = "Matcha", imageUrl = "", cardColor = "#2D5016",
-            isAvailable = true, isFeatured = false, rating = 4.7, totalRatings = 156,
-            sizes = mapOf("small" to 270.0, "medium" to 340.0)
-        ),
-        Product(
-            id = "4", name = "Cappuccino", description = "Classic Italian cappuccino",
-            category = "Cappuccino", imageUrl = "", cardColor = "#4A2C17",
-            isAvailable = true, isFeatured = false, rating = 4.5, totalRatings = 312,
-            sizes = mapOf("small" to 220.0, "medium" to 290.0)
-        )
-    )
-
-    val fakeCategories = listOf(
-        Category(id = "0", name = "All", iconName = "", order = 0),
-        Category(id = "1", name = "Espresso", iconName = "", order = 1),
-        Category(id = "2", name = "Latte", iconName = "", order = 2),
-        Category(id = "3", name = "Cold Brew", iconName = "", order = 3),
-        Category(id = "4", name = "Matcha", iconName = "", order = 4),
-    )
-
-    HomeScreen(
-        uiState = HomeViewModel.HomeUiState.Success(
-            firstName = "Anup",
-            products = fakeProducts,
-            featuredProducts = fakeProducts.filter { it.isFeatured },
-            categories = fakeCategories,
-            selectedCategory = "All"
-        ),
-        activeOrder = null,
-        onProductClick = {},
-        onCategorySelected = {},
-        onAddToCart = {},
-        onTrackOrder = {},
-        onRetry = {}
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun HomeScreenLoadingPreview() {
-    HomeScreen(
-        uiState = HomeViewModel.HomeUiState.Loading,
-        activeOrder = null,
-        onProductClick = {},
-        onCategorySelected = {},
-        onAddToCart = {},
-        onTrackOrder = {},
-        onRetry = {}
-    )
-}

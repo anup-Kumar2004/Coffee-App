@@ -14,11 +14,12 @@
         android:name=".CoffeeApplication"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CoffeeApp">
+        android:enableOnBackInvokedCallback="true"
+        android:theme="@style/Theme.CoffeeApp"
+        tools:targetApi="33">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.CoffeeApp"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustNothing">

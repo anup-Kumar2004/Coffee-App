@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -31,7 +30,7 @@ fun StoreLocatorScreenRoute(
     val uiState by viewModel.uiState.collectAsState()
     val orderPlacementState by viewModel.orderPlacementState.collectAsState()
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -54,9 +53,15 @@ fun StoreLocatorScreenRoute(
     LaunchedEffect(orderPlacementState) {
         val state = orderPlacementState
         if (state is StoreLocatorViewModel.OrderPlacementState.Success) {
-            navController.navigate(Screen.OrderPickup.createRoute(state.orderId)) {
+            // Pop the old MainScreen instance (with its stale Cart-tab inner
+            // nav state) and push a brand-new one. A fresh MainScreen always
+            // boots its inner NavHost at startDestination = Home, so the user
+            // lands on Home (with the active-order banner) instead of wherever
+            // their inner tab nav happened to be left.
+            navController.navigate(Screen.MainScreen.route) {
                 popUpTo(Screen.MainScreen.route) { inclusive = true }
             }
+            navController.navigate(Screen.OrderPickup.createRoute(state.orderId))
         }
     }
 

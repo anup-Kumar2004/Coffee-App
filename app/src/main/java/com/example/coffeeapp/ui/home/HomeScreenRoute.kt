@@ -14,10 +14,12 @@ fun HomeScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val activeOrder by viewModel.activeOrder.collectAsState()
+    val dismissedOrderId by viewModel.dismissedOrderId.collectAsState()
 
     HomeScreen(
         uiState = uiState,
         activeOrder = activeOrder,
+        dismissedOrderId = dismissedOrderId,
         onProductClick = { productId ->
             navController.navigate(Screen.ProductDetail.createRoute(productId))
         },
@@ -29,6 +31,9 @@ fun HomeScreenRoute(
         },
         onTrackOrder = { orderId ->
             navController.navigate(Screen.OrderPickup.createRoute(orderId))
+        },
+        onDismissActiveOrder = { orderId ->
+            viewModel.dismissActiveOrderBanner(orderId)
         },
         onRetry = {
             viewModel.loadData()

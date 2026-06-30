@@ -29,6 +29,9 @@ fun MainScreen(
     val cartItemCount by cartViewModel.cartItems.collectAsState()
     val totalCartCount = cartItemCount.size
 
+    val mainViewModel: MainViewModel = hiltViewModel()
+    val hasActiveOrder by mainViewModel.hasActiveOrder.collectAsState()
+
     val currentBackStackEntry by innerNavController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
 
@@ -40,6 +43,7 @@ fun MainScreen(
             BottomNavBar(
                 selectedTab = selectedTab,
                 cartItemCount = totalCartCount,
+                hasActiveOrder = hasActiveOrder,
                 onTabSelected = { tab ->
                     if (tab.route != currentRoute) {
                         innerNavController.navigate(tab.route) {

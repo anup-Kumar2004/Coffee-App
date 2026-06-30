@@ -41,7 +41,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import com.example.coffeeapp.ui.theme.StarbucksGreen
@@ -88,6 +87,7 @@ enum class BottomNavTab(
 fun BottomNavBar(
     selectedTab: BottomNavTab,
     cartItemCount: Int,
+    hasActiveOrder: Boolean,
     onTabSelected: (BottomNavTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -112,6 +112,7 @@ fun BottomNavBar(
                     tab = tab,
                     isSelected = tab == selectedTab,
                     badgeCount = if (tab == BottomNavTab.CART) cartItemCount else 0,
+                    showDotBadge = tab == BottomNavTab.ORDER_HISTORY && hasActiveOrder,
                     onClick = { onTabSelected(tab) },
                     modifier = Modifier.weight(1f)
                 )
@@ -125,6 +126,7 @@ private fun NavBarItem(
     tab: BottomNavTab,
     isSelected: Boolean,
     badgeCount: Int,
+    showDotBadge: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -161,6 +163,12 @@ private fun NavBarItem(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(x = 6.dp, y = (-4).dp)
+                )
+            } else if (showDotBadge) {
+                NotificationDot(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-2).dp)
                 )
             }
         }
@@ -202,4 +210,15 @@ private fun CartBadge(count: Int, modifier: Modifier = Modifier) {
             lineHeight = 7.sp
         )
     }
+}
+
+@Composable
+private fun NotificationDot(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(10.dp)
+            .background(StarbucksWhite, CircleShape)
+            .padding(1.5.dp)
+            .background(CartBadgeRed, CircleShape)
+    )
 }
