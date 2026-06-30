@@ -3,9 +3,11 @@ package com.example.coffeeapp.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.coffeeapp.data.CartRepository
+import com.example.coffeeapp.data.OrderRepository
 import com.example.coffeeapp.data.ProductRepository
 import com.example.coffeeapp.data.UserRepository
 import com.example.coffeeapp.model.Category
+import com.example.coffeeapp.model.Order
 import com.example.coffeeapp.model.Product
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +19,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val userRepository: UserRepository,
-    private val cartRepository: CartRepository
+    private val cartRepository: CartRepository,
+    private val orderRepository: OrderRepository
 ) : ViewModel() {
 
     sealed class HomeUiState {
@@ -35,8 +38,12 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState = _uiState.asStateFlow()
 
+    private val _activeOrder = MutableStateFlow<Order?>(null)
+    val activeOrder = _activeOrder.asStateFlow()
+
     init {
         loadData()
+        loadActiveOrder()
     }
 
     fun loadData() {
@@ -66,6 +73,14 @@ class HomeViewModel @Inject constructor(
                     ?: categoriesResult.exceptionOrNull()
                     ?: featuredResult.exceptionOrNull()
                 _uiState.value = HomeUiState.Error(error?.message ?: "Something went wrong")
+            }
+        }
+    }
+
+    fun loadActiveOrder() {
+        viewModelScope.launch {
+            orderRepository.listenToActivePendingOrder().collect { order ->
+                _activeOrder.value = order
             }
         }
     }

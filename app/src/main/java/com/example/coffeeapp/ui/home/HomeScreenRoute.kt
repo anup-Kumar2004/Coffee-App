@@ -13,9 +13,11 @@ fun HomeScreenRoute(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val activeOrder by viewModel.activeOrder.collectAsState()
 
     HomeScreen(
         uiState = uiState,
+        activeOrder = activeOrder,
         onProductClick = { productId ->
             navController.navigate(Screen.ProductDetail.createRoute(productId))
         },
@@ -24,6 +26,9 @@ fun HomeScreenRoute(
         },
         onAddToCart = { product ->
             viewModel.addToCart(product)
+        },
+        onTrackOrder = { orderId ->
+            navController.navigate(Screen.OrderPickup.createRoute(orderId))
         },
         onRetry = {
             viewModel.loadData()

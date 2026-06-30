@@ -1,9 +1,15 @@
 package com.example.coffeeapp.ui.home
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,7 +37,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
@@ -43,7 +51,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,10 +70,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.coffeeapp.model.Category
+import com.example.coffeeapp.model.Order
 import com.example.coffeeapp.model.Product
 import com.example.coffeeapp.ui.components.HomeLoadingSkeleton
 import com.example.coffeeapp.ui.theme.CoffeeBrown
 import com.example.coffeeapp.ui.theme.StarbucksBlack
+import com.example.coffeeapp.ui.theme.StarbucksDarkGreen
+import com.example.coffeeapp.ui.theme.StarbucksGold
 import com.example.coffeeapp.ui.theme.StarbucksGray
 import com.example.coffeeapp.ui.theme.StarbucksGreen
 import com.example.coffeeapp.ui.theme.StarbucksMint
@@ -75,16 +89,18 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun HomeScreen(
     uiState: HomeViewModel.HomeUiState,
+    activeOrder: Order?,
     onProductClick: (String) -> Unit,
     onCategorySelected: (String) -> Unit,
     onAddToCart: (Product) -> Unit,
+    onTrackOrder: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -108,8 +124,10 @@ fun HomeScreen(
             is HomeViewModel.HomeUiState.Success -> {
                 HomeContent(
                     state = uiState,
+                    activeOrder = activeOrder,
                     onProductClick = onProductClick,
                     onCategorySelected = onCategorySelected,
+                    onTrackOrder = onTrackOrder,
                     onAddToCart = { product ->
                         onAddToCart(product)
                         snackbarJob.value?.cancel()
@@ -144,8 +162,10 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     state: HomeViewModel.HomeUiState.Success,
+    activeOrder: Order?,
     onProductClick: (String) -> Unit,
     onCategorySelected: (String) -> Unit,
+    onTrackOrder: (String) -> Unit,
     onAddToCart: (Product) -> Unit
 ){
     val productRows = state.products.chunked(2)
@@ -158,6 +178,26 @@ private fun HomeContent(
 
         item(key = "header") {
             HomeHeader(firstName = state.firstName)
+        }
+
+        if (activeOrder != null) {
+            item(key = "active_order") {
+                var dismissed by remember(activeOrder.orderId) { mutableStateOf(false) }
+
+                AnimatedVisibility(
+                    visible = !dismissed,
+                    exit = fadeOut(tween(250)) + shrinkVertically(tween(250))
+                ) {
+                    Column {
+                        ActiveOrderTicket(
+                            order = activeOrder,
+                            onTrack = { onTrackOrder(activeOrder.orderId) },
+                            onDismiss = { dismissed = true }
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+            }
         }
 
         if (state.featuredProducts.isNotEmpty()) {
@@ -223,6 +263,209 @@ private fun HomeContent(
             }
         }
     }
+}
+
+
+/**
+ * A premium banner for the user's active pending order — a single deep
+ * green card rendered as a vertical stack so the full order ID and full
+ * store address always have room to breathe, with a dedicated full-width
+ * "Track order" row at the bottom rather than a cramped side tab.
+ */
+@Composable
+private fun ActiveOrderTicket(
+    order: Order,
+    onTrack: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var remainingSeconds by remember(order.orderId) {
+        mutableLongStateOf(computeRemainingSeconds(order))
+    }
+
+    LaunchedEffect(order.orderId) {
+        while (remainingSeconds > 0) {
+            delay(1000.milliseconds)
+            remainingSeconds = computeRemainingSeconds(order)
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "liveDotPulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
+    val minutes = remainingSeconds / 60
+    val seconds = remainingSeconds % 60
+    val countdownText = "%d:%02d".format(minutes, seconds)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .shadow(elevation = 6.dp, shape = RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(StarbucksGreen, StarbucksDarkGreen)
+                )
+            )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 18.dp, top = 16.dp, end = 12.dp, bottom = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .graphicsLayer {
+                                    scaleX = pulseScale
+                                    scaleY = pulseScale
+                                    alpha = pulseAlpha
+                                }
+                                .background(StarbucksMint.copy(alpha = 0.5f), CircleShape)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .background(StarbucksMint, CircleShape)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Order in progress",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = StarbucksMint,
+                        letterSpacing = 0.3.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = countdownText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StarbucksGold
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onDismiss
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Dismiss",
+                            tint = Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "#${order.orderId}",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 0.4.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = order.storeName,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = order.storeAddress,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.7f),
+                    lineHeight = 16.sp
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.14f))
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onTrack
+                    )
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Track order",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun computeRemainingSeconds(order: Order): Long {
+    val placedAtMillis = order.timestamp.toDate().time
+    val expiryMillis = placedAtMillis + 30L * 60 * 1000
+    val remainingMillis = expiryMillis - System.currentTimeMillis()
+    return (remainingMillis / 1000).coerceAtLeast(0)
 }
 
 
@@ -739,9 +982,11 @@ fun HomeScreenPreview() {
             categories = fakeCategories,
             selectedCategory = "All"
         ),
+        activeOrder = null,
         onProductClick = {},
         onCategorySelected = {},
         onAddToCart = {},
+        onTrackOrder = {},
         onRetry = {}
     )
 }
@@ -751,9 +996,11 @@ fun HomeScreenPreview() {
 fun HomeScreenLoadingPreview() {
     HomeScreen(
         uiState = HomeViewModel.HomeUiState.Loading,
+        activeOrder = null,
         onProductClick = {},
         onCategorySelected = {},
         onAddToCart = {},
+        onTrackOrder = {},
         onRetry = {}
     )
 }

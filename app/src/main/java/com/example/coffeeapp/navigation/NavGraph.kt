@@ -16,6 +16,7 @@ import com.example.coffeeapp.ui.checkout.StoreLocatorScreenRoute
 import com.example.coffeeapp.ui.main.MainScreen
 import com.example.coffeeapp.ui.productdetail.ProductDetailScreenRoute
 import com.example.coffeeapp.ui.welcome.WelcomeScreen
+import com.example.coffeeapp.ui.checkout.OrderResultScreenRoute
 
 @Composable
 fun AppNavHost(
@@ -67,6 +68,15 @@ fun AppNavHost(
             arguments = listOf(navArgument("orderId") { type = NavType.StringType })
         ) {
             OrderCompleteScreenRoute(navController = navController)
+        }
+        composable(
+            route = Screen.OrderResult.route,
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.StringType },
+                navArgument("resultType") { type = NavType.StringType }
+            )
+        ) {
+            OrderResultScreenRoute(navController = navController)
         }
     }
 }

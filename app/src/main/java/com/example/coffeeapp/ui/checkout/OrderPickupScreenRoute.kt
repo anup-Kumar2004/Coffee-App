@@ -14,9 +14,9 @@ fun OrderPickupScreenRoute(
     viewModel: OrderPickupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val cancelState by viewModel.cancelState.collectAsState()
+    val expiryState by viewModel.expiryState.collectAsState()
 
-    // Live Firestore listener (via the ViewModel) drives this — the moment status flips
-    // to "completed" in Firestore, this fires and navigates the user automatically.
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is OrderPickupViewModel.OrderPickupUiState.Success &&
@@ -28,9 +28,37 @@ fun OrderPickupScreenRoute(
         }
     }
 
+    LaunchedEffect(cancelState) {
+        if (cancelState is OrderPickupViewModel.CancelState.Cancelled) {
+            val orderId = (uiState as? OrderPickupViewModel.OrderPickupUiState.Success)?.order?.orderId ?: ""
+            navController.navigate(Screen.OrderResult.createRoute(orderId, OrderResultType.CANCELLED.name)) {
+                popUpTo(Screen.MainScreen.route)
+            }
+        }
+    }
+
+    LaunchedEffect(expiryState) {
+        if (expiryState is OrderPickupViewModel.ExpiryState.Expired) {
+            val orderId = (uiState as? OrderPickupViewModel.OrderPickupUiState.Success)?.order?.orderId ?: ""
+            navController.navigate(Screen.OrderResult.createRoute(orderId, OrderResultType.EXPIRED.name)) {
+                popUpTo(Screen.MainScreen.route)
+            }
+        }
+    }
+
     OrderPickupScreen(
         uiState = uiState,
+        cancelState = cancelState,
+        expiryState = expiryState,
         onToggleOtp = { viewModel.toggleOtpVisibility() },
-        onNavigateBack = { navController.navigateUp() }
+        onNavigateBack = {
+            navController.navigate(Screen.MainScreen.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        },
+        onCancelTapped = { viewModel.onCancelTapped() },
+        onCancelDismissed = { viewModel.onCancelDismissed() },
+        onCancelConfirmed = { viewModel.onCancelConfirmed() },
+        onCancelErrorDismissed = { viewModel.onCancelErrorDismissed() }
     )
 }

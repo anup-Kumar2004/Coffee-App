@@ -45,6 +45,33 @@ class OrderRepository @Inject constructor(
         }
     }
 
+    fun listenToActivePendingOrder(): Flow<Order?> = callbackFlow {
+        val uid = getCurrentUserId()
+        if (uid.isEmpty()) {
+            trySend(null)
+            awaitClose { }
+            return@callbackFlow
+        }
+
+        val listenerRegistration = firestore
+            .collection("orders")
+            .whereEqualTo("userId", uid)
+            .whereEqualTo("status", "pending")
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(null)
+                    return@addSnapshotListener
+                }
+                val order = snapshot?.documents?.firstOrNull()?.let { doc ->
+                    doc.toObject(Order::class.java)?.copy(orderId = doc.id)
+                }
+                trySend(order)
+            }
+        awaitClose { listenerRegistration.remove() }
+    }
+
     suspend fun updateOrderStatus(orderId: String, status: String): Result<Unit> {
         return try {
             firestore
@@ -58,14 +85,7 @@ class OrderRepository @Inject constructor(
         }
     }
 
-    /**
-     * Sets rated=true on the order document in Firestore.
-     * Called after the user successfully submits product ratings so we
-     * can prevent a second rating submission if they return to this screen.
-     * Silent failure is intentional — if this fails, the worst outcome is
-     * the user sees the rating form again on next visit, but RatingState.Submitted
-     * in the ViewModel still prevents a double submission in the current session.
-     */
+
     suspend fun markOrderAsRated(orderId: String) {
         try {
             firestore

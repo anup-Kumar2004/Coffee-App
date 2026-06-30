@@ -55,7 +55,7 @@ fun StoreLocatorScreenRoute(
         val state = orderPlacementState
         if (state is StoreLocatorViewModel.OrderPlacementState.Success) {
             navController.navigate(Screen.OrderPickup.createRoute(state.orderId)) {
-                popUpTo(Screen.MainScreen.route)
+                popUpTo(Screen.MainScreen.route) { inclusive = true }
             }
         }
     }

@@ -1,9 +1,22 @@
 package com.example.coffeeapp.ui.checkout
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +33,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.WifiOff
@@ -34,14 +50,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.coffeeapp.model.Order
 import com.example.coffeeapp.model.OrderItem
 import com.example.coffeeapp.ui.theme.StarbucksBlack
@@ -51,11 +73,19 @@ import com.example.coffeeapp.ui.theme.StarbucksGreen
 import com.example.coffeeapp.ui.theme.StarbucksMint
 import com.example.coffeeapp.ui.theme.StarbucksWhite
 
+private val CancelRed = Color(0xFFE0483E)
+
 @Composable
 fun OrderPickupScreen(
     uiState: OrderPickupViewModel.OrderPickupUiState,
+    cancelState: OrderPickupViewModel.CancelState,
+    expiryState: OrderPickupViewModel.ExpiryState,
     onToggleOtp: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onCancelTapped: () -> Unit,
+    onCancelDismissed: () -> Unit,
+    onCancelConfirmed: () -> Unit,
+    onCancelErrorDismissed: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -75,9 +105,42 @@ fun OrderPickupScreen(
                 OrderPickupContent(
                     state = uiState,
                     onToggleOtp = onToggleOtp,
-                    onNavigateBack = onNavigateBack
+                    onNavigateBack = onNavigateBack,
+                    onCancelTapped = onCancelTapped
                 )
             }
+        }
+
+        when (cancelState) {
+            is OrderPickupViewModel.CancelState.Confirming -> {
+                CancelConfirmationOverlay(
+                    onKeepOrder = onCancelDismissed,
+                    onConfirmCancel = onCancelConfirmed
+                )
+            }
+            is OrderPickupViewModel.CancelState.Cancelling -> {
+                CancelProgressOverlay(isDone = false)
+            }
+            is OrderPickupViewModel.CancelState.Cancelled -> {
+                CancelProgressOverlay(isDone = true)
+            }
+            is OrderPickupViewModel.CancelState.Error -> {
+                CancelErrorOverlay(
+                    message = cancelState.message,
+                    onDismiss = onCancelErrorDismissed
+                )
+            }
+            else -> Unit
+        }
+
+        when (expiryState) {
+            is OrderPickupViewModel.ExpiryState.Expiring -> {
+                ExpiryOverlay(isDone = false)
+            }
+            is OrderPickupViewModel.ExpiryState.Expired -> {
+                ExpiryOverlay(isDone = true)
+            }
+            else -> Unit
         }
     }
 }
@@ -86,7 +149,8 @@ fun OrderPickupScreen(
 private fun OrderPickupContent(
     state: OrderPickupViewModel.OrderPickupUiState.Success,
     onToggleOtp: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onCancelTapped: () -> Unit
 ) {
     val order = state.order
 
@@ -97,7 +161,6 @@ private fun OrderPickupContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 40.dp)
     ) {
-        // Top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -125,7 +188,7 @@ private fun OrderPickupContent(
                     color = StarbucksBlack
                 )
                 Text(
-                    text = "Order #${order.orderId.takeLast(6).uppercase()}",
+                    text = "Order #${order.orderId}",
                     fontSize = 12.sp,
                     color = StarbucksGray
                 )
@@ -136,7 +199,6 @@ private fun OrderPickupContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Store info card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -183,7 +245,6 @@ private fun OrderPickupContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // OTP Card
         OtpCard(
             otp = order.otp,
             isRevealed = state.isOtpRevealed,
@@ -193,12 +254,10 @@ private fun OrderPickupContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Order summary card
         OrderSummaryCard(order = order)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Cash on pickup note
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -208,13 +267,63 @@ private fun OrderPickupContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "ℹ️", fontSize = 16.sp)
             Text(
                 text = "This is a cash on pickup order. Please bring exact change to the store.",
                 fontSize = 12.sp,
                 color = StarbucksGreen,
                 lineHeight = 18.sp
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AnimatedVisibility(
+            visible = state.cancelButtonVisible,
+            enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { it / 2 },
+            exit = fadeOut(tween(300))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val enabled = state.cancelButtonEnabled
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .border(
+                            width = 1.dp,
+                            color = if (enabled) CancelRed.copy(alpha = 0.35f) else StarbucksGray.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(50.dp)
+                        )
+                        .background(
+                            if (enabled) CancelRed.copy(alpha = 0.06f) else Color.Transparent
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            enabled = enabled,
+                            onClick = onCancelTapped
+                        )
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = null,
+                        tint = if (enabled) CancelRed else StarbucksGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Cancel order",
+                        color = if (enabled) CancelRed else StarbucksGray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
     }
 }
@@ -420,7 +529,7 @@ private fun OrderPickupItemRow(item: OrderItem) {
                     )
                 }
                 Text(
-                    text = "× ${item.quantity}",
+                    text = "x ${item.quantity}",
                     fontSize = 12.sp,
                     color = StarbucksGray
                 )
@@ -433,6 +542,348 @@ private fun OrderPickupItemRow(item: OrderItem) {
             color = StarbucksBlack
         )
     }
+}
+
+@Composable
+private fun CancelConfirmationOverlay(
+    onKeepOrder: () -> Unit,
+    onConfirmCancel: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onKeepOrder,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = StarbucksWhite),
+                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        CancelRed.copy(alpha = 0.10f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                            .padding(top = 28.dp, bottom = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .background(CancelRed.copy(alpha = 0.12f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(CancelRed, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Cancel,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Cancel this order?",
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StarbucksBlack
+                        )
+
+                        Text(
+                            text = "This can't be undone. Your order will be removed and no payment will be taken.",
+                            fontSize = 13.sp,
+                            color = StarbucksGray,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 19.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = onKeepOrder,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = StarbucksGreen
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp, StarbucksGreen.copy(alpha = 0.35f)
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                            ) {
+                                Text(
+                                    text = "Keep order",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Button(
+                                onClick = onConfirmCancel,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = CancelRed)
+                            ) {
+                                Text(
+                                    text = "Cancel order",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CancelProgressOverlay(isDone: Boolean) {
+    FullScreenScrimOverlay {
+        if (!isDone) {
+            CircularProgressIndicator(
+                color = CancelRed,
+                modifier = Modifier.size(52.dp),
+                strokeWidth = 3.dp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Cancelling your order",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = StarbucksBlack
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            AnimatedEllipsisText(
+                text = "Please wait",
+                color = StarbucksGray
+            )
+        } else {
+            OverlayResultIcon(
+                icon = Icons.Default.CheckCircle,
+                tint = CancelRed,
+                backgroundTint = Color(0xFFFFEDEC)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Order Cancelled",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = StarbucksBlack
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Redirecting you now",
+                fontSize = 14.sp,
+                color = StarbucksGray
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExpiryOverlay(isDone: Boolean) {
+    FullScreenScrimOverlay {
+        if (!isDone) {
+            CircularProgressIndicator(
+                color = StarbucksGray,
+                modifier = Modifier.size(52.dp),
+                strokeWidth = 3.dp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Order window closed",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = StarbucksBlack
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            AnimatedEllipsisText(
+                text = "Please wait",
+                color = StarbucksGray
+            )
+        } else {
+            OverlayResultIcon(
+                icon = Icons.Default.TimerOff,
+                tint = StarbucksGray,
+                backgroundTint = Color(0xFFF0F0F0)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Order Expired",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = StarbucksBlack
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Redirecting you now",
+                fontSize = 14.sp,
+                color = StarbucksGray
+            )
+        }
+    }
+}
+
+@Composable
+private fun CancelErrorOverlay(message: String, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = StarbucksWhite),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Could not cancel",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StarbucksBlack
+                    )
+                    Text(
+                        text = message,
+                        fontSize = 14.sp,
+                        color = StarbucksGray,
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = StarbucksGreen)
+                    ) {
+                        Text(text = "OK", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullScreenScrimOverlay(content: @Composable ColumnScope.() -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = StarbucksWhite),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                content = content
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverlayResultIcon(
+    icon: ImageVector,
+    tint: Color,
+    backgroundTint: Color
+) {
+    Box(
+        modifier = Modifier
+            .size(72.dp)
+            .background(backgroundTint, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(40.dp)
+        )
+    }
+}
+
+@Composable
+private fun AnimatedEllipsisText(text: String, color: Color) {
+    val transition = rememberInfiniteTransition(label = "ellipsis")
+    val dotCount by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "dotCount"
+    )
+    val dots = ".".repeat(dotCount.toInt())
+    Text(
+        text = "$text$dots",
+        fontSize = 14.sp,
+        color = color
+    )
 }
 
 @Composable
@@ -470,41 +921,4 @@ private fun OrderPickupErrorState(message: String, onNavigateBack: () -> Unit) {
             }
         }
     }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFF7F8F7)
-@Composable
-fun OrderPickupScreenPreview() {
-    val fakeOrder = Order(
-        orderId = "abc123XYZ456",
-        userId = "user1",
-        items = listOf(
-            OrderItem(
-                productId = "1", productName = "Caramel Latte", selectedSize = "Medium",
-                quantity = 2, unitPrice = 320.0, lineTotal = 640.0
-            ),
-            OrderItem(
-                productId = "2", productName = "Cold Brew", selectedSize = "Large",
-                quantity = 1, unitPrice = 350.0, lineTotal = 350.0
-            )
-        ),
-        itemsTotal = 990.0,
-        serviceFee = 0.50,
-        tax = 49.5,
-        grandTotal = 1040.0,
-        storeId = "store1",
-        storeName = "Crema, Sector 6",
-        storeAddress = "Shop 4, Sector 6 Market, Gurugram, Haryana 122001",
-        otp = "482913",
-        status = "pending"
-    )
-    OrderPickupScreen(
-        uiState = OrderPickupViewModel.OrderPickupUiState.Success(
-            order = fakeOrder,
-            isOtpRevealed = false,
-            remainingSeconds = 1247
-        ),
-        onToggleOtp = {},
-        onNavigateBack = {}
-    )
 }
